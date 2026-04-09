@@ -1,22 +1,16 @@
-const mongoose = require('mongoose');
-require('dotenv').config();
+const mongoose = require("mongoose");
 
-const mongoURI = process.env.MONGO_URI;
-
-module.exports = async function (callback) {
+const connectDB = async () => {
   try {
-    await mongoose.connect(mongoURI);
-    console.log("✅ Connected to MongoDB");
+    await mongoose.connect(process.env.MONGO_URI, {
+      // optional configs (modern mongoose doesn't require much)
+    });
 
-    const foodCollection = mongoose.connection.db.collection("food_items");
-    const categoryCollection = mongoose.connection.db.collection("Categories");
-
-    const foodData = await foodCollection.find({}).toArray();
-    const catData = await categoryCollection.find({}).toArray();
-
-    callback(null, foodData, catData);
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err);
-    callback(err, null, null);
+    console.log("✅ MongoDB Connected");
+  } catch (error) {
+    console.error("❌ DB Connection Error:", error.message);
+    process.exit(1);
   }
 };
+
+module.exports = connectDB;
