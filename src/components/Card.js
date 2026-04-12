@@ -8,11 +8,6 @@ export default function Card(props) {
   const [qty, setQty] = useState(1);
   const [size, setSize] = useState("");
   const priceRef = useRef();
-  // const [btnEnable, setBtnEnable] = useState(false);
-  // let totval = 0
-  // let price = Object.values(options).map((value) => {
-  //   return parseInt(value, 10);
-  // });
   let options = props.options;
   let priceOptions = Object.keys(options);
   let foodItem = props.item;
@@ -28,53 +23,43 @@ export default function Card(props) {
   const handleOptions = (e) => {
     setSize(e.target.value);
   };
-  const handleAddToCart = async () => {
-    let food = [];
-    for (const item of data) {
-      if (item.id === foodItem._id) {
-        food = item;
 
-        break;
-      }
+  const handleAddToCart = () => {
+    // ✅ Always ensure valid image
+    const image = foodItem.img || props.ImgSrc;
+
+    if (!image) {
+      console.error("Image missing for item:", foodItem);
+      return; // ❌ stop bad data
     }
-    console.log(food);
-    console.log(new Date());
-    if (food && food.id) {
-      if (food.size === size) {
-        await dispatch({
-          type: "UPDATE",
+
+    const existingItem = data.find(
+      (item) => item?.id === foodItem._id && item?.size === size,
+    );
+
+    if (existingItem) {
+      dispatch({
+        type: "UPDATE",
+        payload: {
           id: foodItem._id,
+          qty: Number(qty),
           price: finalPrice,
-          qty: qty,
-        });
-        return;
-      } else if (food.size !== size) {
-        await dispatch({
-          type: "ADD",
-          id: foodItem._id,
-          name: foodItem.name,
-          price: finalPrice,
-          qty: qty,
-          size: size,
-          img: props.ImgSrc,
-        });
-        console.log("Size different so simply ADD one more to the list");
-        return;
-      }
+        },
+      });
       return;
     }
 
-    await dispatch({
+    dispatch({
       type: "ADD",
-      id: foodItem._id,
-      name: foodItem.name,
-      price: finalPrice,
-      qty: qty,
-      size: size,
-      img: props.ImgSrc,
+      payload: {
+        id: foodItem._id,
+        name: foodItem.name,
+        price: finalPrice,
+        qty: Number(qty),
+        size: size,
+        img: props.ImgSrc, // ✅ ALWAYS valid
+      },
     });
-
-    // setBtnEnable(true)
   };
 
   useEffect(() => {

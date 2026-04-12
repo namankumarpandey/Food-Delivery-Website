@@ -1,20 +1,24 @@
-var jwt = require('jsonwebtoken');
-const jwtSecret = "HaHa"
-const fetch = (req,res,next)=>{
-    // get the user from the jwt token and add id to req object
-    const token = req.header('auth-token');
-    if(!token){
-        res.status(401).send({error:"Invalid Auth Token"})
+const jwt = require("jsonwebtoken");
+const jwtSecret = process.env.JWT_SECRET;
+const fetch = (req, res, next) => {
+  // get the user from the jwt token and add id to req object
+  try {
+    console.log("HEADERS:", req.headers);
+    const authHeader = req.header("Authorization");
 
-    }
-    try {
-        const data = jwt.verify(token,jwtSecret);
-        req.user = data.user
-        next();
-        
-    } catch (error) {
-        res.status(401).send({error:"Invalid Auth Token"})
+    if (!authHeader) {
+      return res.status(401).send({ error: "No token, access denied" });
     }
 
-}
-module.exports = fetch
+    // ✅ Remove "Bearer " from token
+    const token = authHeader.replace("Bearer ", "");
+
+    const data = jwt.verify(token, jwtSecret);
+
+    req.user = data.user;
+    next();
+  } catch (error) {
+    return res.status(401).send({ error: "Invalid token" });
+  }
+};
+module.exports = fetch;

@@ -8,6 +8,7 @@ var jwt = require("jsonwebtoken");
 const axios = require("axios");
 const fetch = require("../middleware/fetchdetails");
 const jwtSecret = process.env.JWT_SECRET;
+
 //
 // 🔐 CREATE USER
 //
@@ -20,22 +21,24 @@ router.post(
   ],
   async (req, res) => {
     try {
+      let success = false;
+
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
-        return res.status(400).json({ success: false, errors: errors.array() });
+        return res.status(400).json({ success, error: errors.array()[0].msg });
       }
       const { name, email, password, location } = req.body;
 
       const existingUser = await User.findOne({ email });
       if (existingUser) {
         return res.status(400).json({
-          success: false,
-          error: "User already exists",
+          success,
+          error: "Email already registered",
         });
       }
 
       const salt = await bcrypt.genSalt(10);
-      let securePass = await bcrypt.hash(req.body.password, salt);
+      let securePass = await bcrypt.hash(password, salt);
 
       const user = await User.create({
         name,
@@ -49,12 +52,17 @@ router.post(
           id: user.id,
         },
       };
+
       const authToken = jwt.sign(data, jwtSecret);
+
       success = true;
-      res.json({ success, authToken });
+      return res.status(201).json({ success, authToken });
     } catch (err) {
       console.error(err);
-      res.json({ error: "Please enter a unique value." });
+      res.status(500).json({
+        success: false,
+        error: "Server error, please try again later",
+      });
     }
   },
 );
@@ -105,15 +113,30 @@ router.post(
   },
 );
 
-// Get logged in User details, Login Required.
+// Get logged-in User details using token, Login Required.
 router.post("/getuser", fetch, async (req, res) => {
   try {
+    // user id comes from middleware (JWT decoded)
     const userId = req.user.id;
-    const user = await User.findById(userId).select("-password"); // -password will not pick password from db.
-    res.json(user);
+    // find user from DB (exclude password)
+    const user = await User.findById(userId).select("-password");
+
+    // ❗ if user not found
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // send user data
+    res.json({
+      success: true,
+      user,
+    });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Server Error");
+    console.error("GetUser Error:", error.message);
+    res.status(500).json({
+      success: false,
+      error: "Server error",
+    });
   }
 });
 
@@ -160,6 +183,9 @@ router.post("/foodData", async (req, res) => {
 router.post("/orderData", async (req, res) => {
   try {
     const { order_data, email, order_date } = req.body;
+
+    // ✅ 👉 ADD THIS LINE HERE
+    console.log("Incoming order_data:", order_data);
 
     let existingOrder = await Order.findOne({ email });
     if (!existingOrder) {

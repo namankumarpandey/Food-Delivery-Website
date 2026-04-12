@@ -17,15 +17,32 @@ export default function Cart() {
     try {
       const userEmail = localStorage.getItem("userEmail");
 
+      // ✅ CLEAN DATA (IMPORTANT)
+      const cleanData = data.filter(
+        (item) => item && item.name && item.price && item.qty,
+      );
+
+      if (cleanData.length === 0) {
+        alert("Cart is empty or invalid");
+        return;
+      }
+
       const response = await fetch("http://localhost:5000/api/auth/orderData", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          order_data: data,
+          order_data: data.map((item) => ({
+            id: item.id,
+            name: item.name,
+            qty: item.qty,
+            size: item.size,
+            price: item.price,
+            img: item.img, // ✅ VERY IMPORTANT
+          })),
           email: userEmail,
-          order_date: new Date().toDateString(),
+          order_date: new Date(),
         }),
       });
 
@@ -39,7 +56,10 @@ export default function Cart() {
     }
   };
 
-  let totalPrice = data.reduce((total, food) => total + Number(food.price), 0);
+  let totalPrice = data.reduce(
+    (total, food) => total + Number(food?.price || 0),
+    0,
+  );
 
   return (
     <div>
@@ -57,17 +77,22 @@ export default function Cart() {
           </thead>
           <tbody>
             {data.map((food, index) => (
-              <tr key={food.id || index}>
+              <tr key={food?.id || index}>
                 <th>{index + 1}</th>
-                <td>{food.name}</td>
-                <td>{food.qty}</td>
-                <td>{food.size}</td>
-                <td>{food.price}</td>
+                <td>{food?.name}</td>
+                <td>{food?.qty}</td>
+                <td>{food?.size}</td>
+                <td>{food?.price}</td>
                 <td>
                   <button
                     type="button"
                     className="btn btn-danger btn-sm"
-                    onClick={() => dispatch({ type: "REMOVE", index: index })}
+                    onClick={() =>
+                      dispatch({
+                        type: "REMOVE",
+                        payload: { id: food.id },
+                      })
+                    }
                   >
                     <DeleteIcon style={{ fontSize: "18px" }} />
                   </button>
